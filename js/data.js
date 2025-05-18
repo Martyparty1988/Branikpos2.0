@@ -50,7 +50,7 @@ export const DEFAULT_ITEMS = [
 
   // Poplatky
   { kategorie: "Poplatky", nazev: "City tax", cena: 2, mena: "€", typ: "citytax", fixni: true },
-  { kategorie: "Poplatky", nazev: "Osoba navíc", cena: 1000, mena: "Kč", fixni: true },
+  { kategorie: "Poplatky", nazev: "Osoba navíc", cena: 1000, mena: "Kč", typ: "osobanavic", fixni: true },
 ];
 
 // Helper pro ukládání dat do localStorage s ošetřením chyb
@@ -107,7 +107,16 @@ export function vypocitejCelkem(items, settings, kurz) {
         let cityTaxCelk = osoby * dny * item.cena;
         sum += settings.mena === "€" ? cityTaxCelk : cityTaxCelk * kurz;
       }
-    } 
+    }
+    // Osoba navíc – speciální zpracování
+    else if (item.typ === "osobanavic") {
+      let osoby = item.osoby || 0;
+      let dny = item.dny || 0;
+      if (osoby > 0 && dny > 0) {
+        let osobaNavicCelk = osoby * dny * item.cena;
+        sum += settings.mena === "€" ? osobaNavicCelk / kurz : osobaNavicCelk;
+      }
+    }
     // Manuální položka (wellness, snídaně...)
     else if (item.manualni && item.castka) {
       sum += settings.mena === item.mena
