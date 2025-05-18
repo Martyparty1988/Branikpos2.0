@@ -422,4 +422,174 @@ function renderInvoiceSummary() {
       const dropdown = createEl('div', { 
         id: dropdownId,
         className: 'export-dropdown',
-        style: 'position: absolute; bottom: 50px; right: 16px; background: var(--color-surface); box-shadow: var(--sha
+        style: 'position: absolute; bottom: 50px; right: 16px; background: var(--color-surface); box-shadow: var(--shadow-lg); border-radius: var(--radius-md); z-index: 100; padding: 8px;'
+      });
+      
+      const pdfBtn = createButton('Export PDF', () => {
+        dropdown.remove();
+        exportToPdf();
+      }, { 
+        type: 'outline', 
+        size: 'sm',
+        style: 'width: 100%; margin-bottom: 8px; text-align: left;'
+      });
+      
+      const csvBtn = createButton('Export CSV', () => {
+        dropdown.remove();
+        exportCsv();
+      }, { 
+        type: 'outline', 
+        size: 'sm',
+        style: 'width: 100%; text-align: left;'
+      });
+      
+      dropdown.appendChild(pdfBtn);
+      dropdown.appendChild(csvBtn);
+      
+      // Přidáme dropdown do stránky
+      button.parentNode.appendChild(dropdown);
+      
+      // Zavřít při kliknutí mimo
+      setTimeout(() => {
+        const closeDropdown = (e) => {
+          if (!dropdown.contains(e.target) && e.target !== button) {
+            dropdown.remove();
+            document.removeEventListener('click', closeDropdown);
+          }
+        };
+        
+        document.addEventListener('click', closeDropdown);
+      }, 10);
+    }, {
+      type: 'secondary',
+      icon: '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z" fill="currentColor"/></svg>'
+    });
+    
+    actionButtons.appendChild(exportBtn);
+  }
+  
+  // Reset
+  const resetBtn = createButton('Resetovat', () => {
+    confirmAction(
+      'Opravdu chcete resetovat všechny zadané položky?',
+      () => {
+        const resetItems = resetForm(stav.items);
+        updateState({ items: resetItems });
+        notifySuccess('Formulář byl resetován');
+      }
+    );
+  }, {
+    type: 'danger',
+    icon: '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z" fill="currentColor"/></svg>'
+  });
+  
+  actionButtons.appendChild(resetBtn);
+  summaryContainer.appendChild(actionButtons);
+  
+  return summaryContainer;
+}
+
+// Uložení účtenky
+function ulozUctenku() {
+  // Filtrování položek, které mají být na účtence
+  let polozkyNaUctence = stav.items
+    .filter(item => {
+      if (item.kategorie === "Dárky") return item.vybrano;
+      if (item.typ === "citytax") return item.osoby && item.dny;
+      if (item.manualni) return item.castka && item.castka > 0;
+      return item.pocet && item.pocet > 0;
+    })
+    .map(item => {
+      // Vytvoření kopie položky bez interních atributů
+      let vystup = { ...item };
+      delete vystup.fixni;
+      return vystup;
+    });
+  
+  // Pokud nejsou žádné položky, zobrazit upozornění
+  if (polozkyNaUctence.length === 0) {
+    notifyError('Účtenka neobsahuje žádné položky');
+    return;
+  }
+  
+  // Vytvoření objektu faktury
+  let faktura = {
+    id: generateId(),
+    timestamp: Date.now(),
+    datum: (new Date()).toLocaleString("cs-CZ"),
+    hostName: stav.settings.hostName || "",
+    resNum: stav.settings.resNum || "",
+    invoiceNote: stav.settings.invoiceNote || "",
+    mena: stav.settings.mena,
+    kurz: stav.kurz,
+    celkem: vypocitejCelkem(stav.items, stav.settings, stav.kurz).celkova,
+    sleva: vypocitejCelkem(stav.items, stav.settings, stav.kurz).sleva,
+    polozky: polozkyNaUctence
+  };
+  
+  try {
+    // Přidání do historie
+    const historie = [faktura, ...stav.historie];
+    saveData(LS_KEYS.HIST, historie);
+    
+    // Reset formuláře
+    const resetItems = resetForm(stav.items);
+    
+    // Aktualizace stavu
+    updateState({ 
+      historie: historie,
+      items: resetItems,
+      tab: "history" // Přepnutí na záložku historie
+    });
+    
+    // Notifikace
+    notifySuccess('Účtenka byla uložena do historie');
+    
+    // Pokud máme Share API na mobilech, nabídneme možnost sdílet
+    if (window.innerWidth <= 768 && navigator.share) {
+      setTimeout(() => {
+        confirmAction(
+          'Chcete účtenku rovnou exportovat nebo sdílet?',
+          () => {
+            exportToPdf();
+          },
+          () => {
+            // Uživatel nechce sdílet, nic neděláme
+          }
+        );
+      }, 500); // Malé zpoždění po notifikaci
+    }
+  } catch (error) {
+    // Zpracování chyby při ukládání
+    console.error('Chyba při ukládání účtenky:', error);
+    notifyError('Nepodařilo se uložit účtenku. Opakujte akci.');
+    
+    // Zkusit vyčistit starší data
+    if (error instanceof DOMException && (
+      error.code === 22 || // QuotaExceededError
+      error.code === 1014 || // NS_ERROR_DOM_QUOTA_REACHED (Firefox)
+      error.name === 'QuotaExceededError'
+    )) {
+      // Pokud je localStorage plný, pokusíme se vyčistit starší data
+      if (stav.historie.length > 10) {
+        const reducedHistory = stav.historie.slice(0, 10);
+        saveData(LS_KEYS.HIST, reducedHistory);
+        updateState({ historie: reducedHistory });
+        notifyError('Paměť je plná. Starší historie byla vyčištěna. Zkuste to znovu.');
+      }
+    }
+  }
+}
+
+// Přidání nového dárku
+function addGift() {
+  const newItems = [...stav.items, {
+    kategorie: "Dárky",
+    nazev: "Nový dárek",
+    vybrano: false,
+    poznamka: ""
+  }];
+  
+  saveData(LS_KEYS.ITEMS, newItems);
+  updateState({ items: newItems });
+}
