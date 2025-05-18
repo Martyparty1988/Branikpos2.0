@@ -3,6 +3,7 @@ import { loadData, saveData, DEFAULT_KURZ, DEFAULT_ITEMS, CATEGORIES, LS_KEYS } 
 import { renderInvoice } from './invoice.js';
 import { renderHistory } from './history.js';
 import { renderStats } from './stats.js';
+import { renderSettingsTab } from './settings_tab.js'; // Nový import
 import { initModal, showModal, closeModal } from './ui.js';
 import { showSettings } from './settings.js';
 import { initTheme } from './theme.js';
@@ -48,6 +49,9 @@ function renderApp() {
       break;
     case "stats":
       renderStats(content);
+      break;
+    case "settings":
+      renderSettingsTab(content); // Nová záložka
       break;
   }
   
@@ -104,7 +108,7 @@ function checkUrlParams() {
   const urlParams = new URLSearchParams(window.location.search);
   const tabParam = urlParams.get('tab');
   
-  if (tabParam && ['invoice', 'history', 'stats'].includes(tabParam)) {
+  if (tabParam && ['invoice', 'history', 'stats', 'settings'].includes(tabParam)) {
     switchTab(tabParam);
   }
 }
