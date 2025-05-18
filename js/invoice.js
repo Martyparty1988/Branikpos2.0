@@ -574,4 +574,63 @@ function ulozUctenku() {
     saveData(LS_KEYS.HIST, historie);
     
     // Reset formuláře
-    const resetItems = resetForm
+    const resetItems = resetForm(stav.items);
+    
+    // Aktualizace stavu
+    updateState({ 
+      historie: historie,
+      items: resetItems,
+      tab: "history" // Přepnutí na záložku historie
+    });
+    
+    // Notifikace
+    notifySuccess('Účtenka byla uložena do historie');
+    
+    // Pokud máme Share API na mobilech, nabídneme možnost sdílet
+    if (window.innerWidth <= 768 && navigator.share) {
+      setTimeout(() => {
+        confirmAction(
+          'Chcete účtenku rovnou exportovat nebo sdílet?',
+          () => {
+            exportToPdf();
+          },
+          () => {
+            // Uživatel nechce sdílet, nic neděláme
+          }
+        );
+      }, 500); // Malé zpoždění po notifikaci
+    }
+  } catch (error) {
+    // Zpracování chyby při ukládání
+    console.error('Chyba při ukládání účtenky:', error);
+    notifyError('Nepodařilo se uložit účtenku. Opakujte akci.');
+    
+    // Zkusit vyčistit starší data
+    if (error instanceof DOMException && (
+      error.code === 22 || // QuotaExceededError
+      error.code === 1014 || // NS_ERROR_DOM_QUOTA_REACHED (Firefox)
+      error.name === 'QuotaExceededError'
+    )) {
+      // Pokud je localStorage plný, pokusíme se vyčistit starší data
+      if (stav.historie.length > 10) {
+        const reducedHistory = stav.historie.slice(0, 10);
+        saveData(LS_KEYS.HIST, reducedHistory);
+        updateState({ historie: reducedHistory });
+        notifyError('Paměť je plná. Starší historie byla vyčištěna. Zkuste to znovu.');
+      }
+    }
+  }
+}
+
+// Přidání nového dárku
+function addGift() {
+  const newItems = [...stav.items, {
+    kategorie: "Dárky",
+    nazev: "Nový dárek",
+    vybrano: false,
+    poznamka: ""
+  }];
+  
+  saveData(LS_KEYS.ITEMS, newItems);
+  updateState({ items: newItems });
+}
