@@ -191,7 +191,7 @@ function createItemsManagementSection() {
         id: `item-price-${index}`,
         min: 0,
         step: item.mena === "€" ? 0.01 : 1,
-        readOnly: item.fixni || item.manualni
+        readOnly: item.fixni // Odstraněna podmínka item.manualni
       }
     );
     priceCell.appendChild(priceInput);
@@ -497,7 +497,8 @@ function addNewItem() {
     nazev: name,
     cena: price,
     mena: currency,
-    fixni: false
+    fixni: false,
+    manualni: false // Nastaveno na false, aby bylo možné editovat cenu
   };
   
   // Přidání poznámky, pokud byla zadána
