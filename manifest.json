@@ -36,6 +36,13 @@
       "description": "Zobrazení historie účtenek",
       "url": "./?tab=history",
       "icons": [{ "src": "./icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Nastavení aplikace",
+      "short_name": "Nastavení",
+      "description": "Nastavení aplikace Bary Braník",
+      "url": "./?tab=settings",
+      "icons": [{ "src": "./icon-192x192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [
