@@ -164,14 +164,9 @@ export function createSelect(options, selected, onChange, attrs = {}) {
 
 // Vytvoření textového inputu
 export function createTextInput(value, onChange, attrs = {}) {
-  // Vytvoření bezpečného handleru, který zabrání nechtěnému otevření modálního okna
-  const safeOnChange = onChange ? (e) => {
-    // Zastavení propagace události, aby nedošlo k nechtěnému otevření modálního okna
-    e.stopPropagation();
-    
-    // Volání původního handleru
-    onChange(e);
-  } : null;
+  // Připravíme events objekt, který zajistí, že onChange bude volána
+  // pouze pokud je explicitně definována, jinak bude použito attrs.events
+  const events = onChange ? { input: onChange } : (attrs.events || {});
   
   return createEl('input', {
     type: attrs.type || 'text',
@@ -180,23 +175,15 @@ export function createTextInput(value, onChange, attrs = {}) {
     name: attrs.name || '',
     placeholder: attrs.placeholder || '',
     value: value || '',
-    events: { 
-      input: safeOnChange,
-      ...(attrs.events || {})
-    }
+    events: events
   });
 }
 
 // Vytvoření number inputu
 export function createNumberInput(value, onChange, attrs = {}) {
-  // Vytvoření bezpečného handleru, který zabrání nechtěnému otevření modálního okna
-  const safeOnChange = onChange ? (e) => {
-    // Zastavení propagace události, aby nedošlo k nechtěnému otevření modálního okna
-    e.stopPropagation();
-    
-    // Volání původního handleru
-    onChange(e);
-  } : null;
+  // Připravíme events objekt, který zajistí, že onChange bude volána
+  // pouze pokud je explicitně definována, jinak bude použito attrs.events
+  const events = onChange ? { input: onChange } : (attrs.events || {});
   
   return createEl('input', {
     type: 'number',
@@ -207,25 +194,13 @@ export function createNumberInput(value, onChange, attrs = {}) {
     value: value !== undefined && value !== null ? value : '',
     min: attrs.min !== undefined ? attrs.min : 0,
     step: attrs.step || 1,
-    events: { 
-      input: safeOnChange,
-      ...(attrs.events || {})
-    }
+    events: events
   });
 }
 
 // Vytvoření checkbox inputu
 export function createCheckbox(checked, onChange, attrs = {}) {
   const container = createEl('div', { className: 'checkbox-container' });
-  
-  // Vytvoření bezpečného handleru, který zabrání nechtěnému otevření modálního okna
-  const safeOnChange = onChange ? (e) => {
-    // Zastavení propagace události, aby nedošlo k nechtěnému otevření modálního okna
-    e.stopPropagation();
-    
-    // Volání původního handleru
-    onChange(e);
-  } : null;
   
   const checkbox = createEl('input', {
     type: 'checkbox',
@@ -234,8 +209,8 @@ export function createCheckbox(checked, onChange, attrs = {}) {
     name: attrs.name || '',
     checked: !!checked,
     events: { 
-      change: safeOnChange,
-      ...(attrs.events || {})
+      change: onChange,
+      ...attrs.events
     }
   });
   
@@ -256,22 +231,13 @@ export function createCheckbox(checked, onChange, attrs = {}) {
 export function createCurrencySelector(selectedCurrency, kurz, onChange) {
   const container = createEl('div', { className: 'currency-selector' });
   
-  // Vytvoření bezpečného handleru, který zabrání nechtěnému otevření modálního okna
-  const safeOnChange = onChange ? (e) => {
-    // Zastavení propagace události, aby nedošlo k nechtěnému otevření modálního okna
-    e.stopPropagation();
-    
-    // Volání původního handleru
-    onChange(e);
-  } : null;
-  
   const select = createSelect(
     [
       { value: 'Kč', text: 'Kč' },
       { value: '€', text: '€' }
     ],
     selectedCurrency,
-    safeOnChange,
+    onChange,
     { className: 'currency-select' }
   );
   
