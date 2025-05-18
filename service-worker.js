@@ -1,6 +1,6 @@
 // Service worker pro offline přístup k aplikaci
 
-const CACHE_NAME = 'bary-branik-v3';
+const CACHE_NAME = 'bary-branik-v4';
 const APP_ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const APP_ASSETS = [
   './js/history.js',
   './js/invoice.js',
   './js/settings.js',
+  './js/settings_tab.js', // Nový soubor
   './js/stats.js',
   './js/theme.js',
   './js/ui.js',
