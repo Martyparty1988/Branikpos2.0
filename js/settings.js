@@ -1,12 +1,14 @@
 // settings.js - Správa nastavení aplikace
 import { stav, updateState } from './app.js';
 import { 
-  saveData, 
   loadData, 
-  LS_KEYS, 
+  saveData, 
   DEFAULT_KURZ, 
-  DEFAULT_ITEMS,
-  CATEGORIES 
+  DEFAULT_ITEMS, 
+  CATEGORIES, 
+  LS_KEYS,
+  getItems,
+  saveItems
 } from './data.js';
 import { 
   createEl, 
@@ -463,7 +465,7 @@ function showAddItemModal() {
   }, { type: 'secondary' });
   buttonContainer.appendChild(cancelBtn);
   
-  const submitBtn = createButton('Přidat položku', null, { 
+  const submitBtn = createButton('Uložit', null, { 
     type: 'primary',
     events: { click: () => form.dispatchEvent(new Event('submit')) }
   });
@@ -486,37 +488,61 @@ function addNewItem() {
   const note = document.getElementById('new-item-note').value;
   
   // Validace
-  if (!category || !name || isNaN(price) || price < 0 || !currency) {
+  if (!name || name.trim() === '') {
+    notifyError('Název je povinný');
+    return;
+  }
+  
+  if (isNaN(price) || price <= 0) {
+    notifyError('Cena musí být větší než 0');
+    return;
+  }
+  
+  if (!category || !currency) {
     notifyError('Vyplňte všechna povinná pole');
     return;
   }
   
-  // Vytvoření nové položky
+  // Vytvoření nové položky podle požadovaného formátu
   const newItem = {
-    kategorie: category,
-    nazev: name,
+    nazev: name.trim(),
     cena: price,
     mena: currency,
-    fixni: false,
-    manualni: false // Nastaveno na false, aby bylo možné editovat cenu
+    kategorie: category,
+    fixni: true
   };
   
   // Přidání poznámky, pokud byla zadána
-  if (note) {
-    newItem.poznamka = note;
+  if (note && note.trim() !== '') {
+    newItem.poznamka = note.trim();
   }
   
-  // Přidání položky do seznamu
-  const updatedItems = [...stav.items, newItem];
+  // Načtení aktuálních položek z localStorage
+  const currentItems = getItems();
   
-  // Uložení změn
-  saveData(LS_KEYS.ITEMS, updatedItems);
+  // Přidání nové položky do pole
+  const updatedItems = [...currentItems, newItem];
+  
+  // Uložení celého pole zpět do localStorage pomocí saveItems()
+  const saved = saveItems(updatedItems);
+  
+  if (!saved) {
+    notifyError('Chyba při ukládání položky');
+    return;
+  }
   
   // Aktualizace stavu
   updateState({ items: updatedItems });
   
   // Notifikace
-  notifySuccess('Nová položka byla přidána');
+  notifySuccess('Nová položka byla uložena');
+  
+  // Vymazání formuláře
+  document.getElementById('new-item-category').value = CATEGORIES[0];
+  document.getElementById('new-item-name').value = '';
+  document.getElementById('new-item-price').value = '';
+  document.getElementById('new-item-currency').value = 'Kč';
+  document.getElementById('new-item-note').value = '';
   
   // Zavření modálního okna
   showModal(null);
