@@ -1,12 +1,12 @@
 // settings.js - Správa nastavení aplikace
 import { stav, updateState } from './app.js';
 import { 
-  loadData, 
   saveData, 
+  loadData, 
+  LS_KEYS, 
   DEFAULT_KURZ, 
-  DEFAULT_ITEMS, 
-  CATEGORIES, 
-  LS_KEYS,
+  DEFAULT_ITEMS,
+  CATEGORIES,
   getItems,
   saveItems
 } from './data.js';
@@ -465,11 +465,13 @@ function showAddItemModal() {
   }, { type: 'secondary' });
   buttonContainer.appendChild(cancelBtn);
   
-  const submitBtn = createButton('Uložit', null, { 
+  const saveBtn = createButton('Uložit', () => {
+    addNewItem();
+  }, { 
     type: 'primary',
-    events: { click: () => form.dispatchEvent(new Event('submit')) }
+    id: 'save-item-btn'
   });
-  buttonContainer.appendChild(submitBtn);
+  buttonContainer.appendChild(saveBtn);
   
   form.appendChild(buttonContainer);
   modalContent.appendChild(form);
@@ -482,14 +484,14 @@ function showAddItemModal() {
 function addNewItem() {
   // Získání hodnot z formuláře
   const category = document.getElementById('new-item-category').value;
-  const name = document.getElementById('new-item-name').value;
+  const name = document.getElementById('new-item-name').value.trim();
   const price = parseFloat(document.getElementById('new-item-price').value);
   const currency = document.getElementById('new-item-currency').value;
-  const note = document.getElementById('new-item-note').value;
+  const note = document.getElementById('new-item-note').value.trim();
   
-  // Validace
-  if (!name || name.trim() === '') {
-    notifyError('Název je povinný');
+  // Validace - povinný název a cena > 0
+  if (!name) {
+    notifyError('Název položky je povinný');
     return;
   }
   
@@ -503,47 +505,58 @@ function addNewItem() {
     return;
   }
   
-  // Vytvoření nové položky podle požadovaného formátu
+  // Vytvoření nové položky ve formátu požadovaném uživatelem
   const newItem = {
-    nazev: name.trim(),
+    nazev: name,
     cena: price,
     mena: currency,
     kategorie: category,
-    fixni: true
+    fixni: true // Nastaveno na true podle požadavků uživatele
   };
   
   // Přidání poznámky, pokud byla zadána
-  if (note && note.trim() !== '') {
-    newItem.poznamka = note.trim();
+  if (note) {
+    newItem.poznamka = note;
   }
   
-  // Načtení aktuálních položek z localStorage
+  // Načtení aktuálních položek z localStorage pomocí getItems()
   const currentItems = getItems();
   
   // Přidání nové položky do pole
   const updatedItems = [...currentItems, newItem];
   
   // Uložení celého pole zpět do localStorage pomocí saveItems()
-  const saved = saveItems(updatedItems);
+  saveItems(updatedItems);
   
-  if (!saved) {
-    notifyError('Chyba při ukládání položky');
-    return;
-  }
-  
-  // Aktualizace stavu
+  // Aktualizace stavu aplikace
   updateState({ items: updatedItems });
   
-  // Notifikace
-  notifySuccess('Nová položka byla uložena');
+  // Vymazání formuláře po uložení
+  clearAddItemForm();
   
-  // Vymazání formuláře
-  document.getElementById('new-item-category').value = CATEGORIES[0];
-  document.getElementById('new-item-name').value = '';
-  document.getElementById('new-item-price').value = '';
-  document.getElementById('new-item-currency').value = 'Kč';
-  document.getElementById('new-item-note').value = '';
+  // Notifikace o úspěchu
+  notifySuccess('Nová položka byla úspěšně přidána');
   
   // Zavření modálního okna
   showModal(null);
+  
+  // Znovu vykreslení položek (pokud jsme na záložce účtenka)
+  if (stav.tab === 'invoice') {
+    // Aplikace se automaticky překreslí díky updateState()
+  }
+}
+
+// Funkce pro vymazání formuláře
+function clearAddItemForm() {
+  const categorySelect = document.getElementById('new-item-category');
+  const nameInput = document.getElementById('new-item-name');
+  const priceInput = document.getElementById('new-item-price');
+  const currencySelect = document.getElementById('new-item-currency');
+  const noteInput = document.getElementById('new-item-note');
+  
+  if (categorySelect) categorySelect.selectedIndex = 0;
+  if (nameInput) nameInput.value = '';
+  if (priceInput) priceInput.value = '';
+  if (currencySelect) currencySelect.selectedIndex = 0;
+  if (noteInput) noteInput.value = '';
 }
