@@ -199,3 +199,13 @@ export function clearLocalStorageData() {
     return false;
   }
 }
+// Funkce pro načítání položek (getItems)
+export function getItems() {
+  return loadData(LS_KEYS.ITEMS, DEFAULT_ITEMS);
+}
+
+// Funkce pro ukládání položek (saveItems)
+export function saveItems(items) {
+  return saveData(LS_KEYS.ITEMS, items);
+}
+
