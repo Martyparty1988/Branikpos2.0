@@ -6,9 +6,7 @@ import {
   LS_KEYS, 
   DEFAULT_KURZ, 
   DEFAULT_ITEMS,
-  CATEGORIES,
-  getItems,
-  saveItems
+  CATEGORIES 
 } from './data.js';
 import { 
   createEl, 
@@ -305,6 +303,7 @@ function createItemsManagementSection() {
             
             // Notifikace
             notifySuccess('Položka byla smazána');
+            showSettings();
           }
         );
       }, { type: 'danger', size: 'sm' });
@@ -465,13 +464,11 @@ function showAddItemModal() {
   }, { type: 'secondary' });
   buttonContainer.appendChild(cancelBtn);
   
-  const saveBtn = createButton('Uložit', () => {
-    addNewItem();
-  }, { 
+  const submitBtn = createButton('Přidat položku', null, { 
     type: 'primary',
-    id: 'save-item-btn'
+    events: { click: () => form.dispatchEvent(new Event('submit')) }
   });
-  buttonContainer.appendChild(saveBtn);
+  buttonContainer.appendChild(submitBtn);
   
   form.appendChild(buttonContainer);
   modalContent.appendChild(form);
@@ -484,34 +481,25 @@ function showAddItemModal() {
 function addNewItem() {
   // Získání hodnot z formuláře
   const category = document.getElementById('new-item-category').value;
-  const name = document.getElementById('new-item-name').value.trim();
+  const name = document.getElementById('new-item-name').value;
   const price = parseFloat(document.getElementById('new-item-price').value);
   const currency = document.getElementById('new-item-currency').value;
-  const note = document.getElementById('new-item-note').value.trim();
+  const note = document.getElementById('new-item-note').value;
   
-  // Validace - povinný název a cena > 0
-  if (!name) {
-    notifyError('Název položky je povinný');
-    return;
-  }
-  
-  if (isNaN(price) || price <= 0) {
-    notifyError('Cena musí být větší než 0');
-    return;
-  }
-  
-  if (!category || !currency) {
+  // Validace
+  if (!category || !name || isNaN(price) || price < 0 || !currency) {
     notifyError('Vyplňte všechna povinná pole');
     return;
   }
   
-  // Vytvoření nové položky ve formátu požadovaném uživatelem
+  // Vytvoření nové položky
   const newItem = {
+    kategorie: category,
     nazev: name,
     cena: price,
     mena: currency,
-    kategorie: category,
-    fixni: false
+    fixni: false,
+    manualni: false // Nastaveno na false, aby bylo možné editovat cenu
   };
   
   // Přidání poznámky, pokud byla zadána
@@ -519,44 +507,18 @@ function addNewItem() {
     newItem.poznamka = note;
   }
   
-  // Načtení aktuálních položek z localStorage pomocí getItems()
-  const currentItems = getItems();
+  // Přidání položky do seznamu
+  const updatedItems = [...stav.items, newItem];
   
-  // Přidání nové položky do pole
-  const updatedItems = [...currentItems, newItem];
+  // Uložení změn
+  saveData(LS_KEYS.ITEMS, updatedItems);
   
-  // Uložení celého pole zpět do localStorage pomocí saveItems()
-  saveItems(updatedItems);
-  
-  // Aktualizace stavu aplikace
+  // Aktualizace stavu
   updateState({ items: updatedItems });
   
-  // Vymazání formuláře po uložení
-  clearAddItemForm();
-  
-  // Notifikace o úspěchu
-  notifySuccess('Nová položka byla úspěšně přidána');
+  // Notifikace
+  notifySuccess('Nová položka byla přidána');
   
   // Zavření modálního okna
   showModal(null);
-  
-  // Znovu vykreslení položek (pokud jsme na záložce účtenka)
-  if (stav.tab === 'invoice') {
-    // Aplikace se automaticky překreslí díky updateState()
-  }
-}
-
-// Funkce pro vymazání formuláře
-function clearAddItemForm() {
-  const categorySelect = document.getElementById('new-item-category');
-  const nameInput = document.getElementById('new-item-name');
-  const priceInput = document.getElementById('new-item-price');
-  const currencySelect = document.getElementById('new-item-currency');
-  const noteInput = document.getElementById('new-item-note');
-  
-  if (categorySelect) categorySelect.selectedIndex = 0;
-  if (nameInput) nameInput.value = '';
-  if (priceInput) priceInput.value = '';
-  if (currencySelect) currencySelect.selectedIndex = 0;
-  if (noteInput) noteInput.value = '';
 }
