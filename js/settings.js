@@ -511,7 +511,7 @@ function addNewItem() {
     cena: price,
     mena: currency,
     kategorie: category,
-    fixni: true // Nastaveno na true podle požadavků uživatele
+    fixni: false
   };
   
   // Přidání poznámky, pokud byla zadána

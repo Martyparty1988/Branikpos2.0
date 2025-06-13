@@ -526,6 +526,13 @@ body {
   flex-wrap: wrap;
 }
 
+/* Formulář pro přidání nové položky */
+.add-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
 .form-col {
   flex: 1;
   padding: 0 8px;
@@ -1700,20 +1707,12 @@ body {
       width: 100%;
     }
     
-    /* Responzivní tabulky - alternativní zobrazení na malých mobilech */
-    .items-table th:not(:first-child):not(:last-child),
-    .items-table td:not(:first-child):not(:last-child) {
-      display: none;
+    .modal-container {
+      max-height: 90vh;
     }
-    
-    .items-table th:first-child,
-    .items-table td:first-child {
-      width: 60%;
-    }
-    
-    .items-table th:last-child,
-    .items-table td:last-child {
-      width: 40%;
+
+    .items-table {
+      width: 100%;
     }
   }
 }
@@ -1733,9 +1732,10 @@ body {
   }
   
   .modal-container {
-    max-height: 80vh;
+    max-height: 90vh;
     margin-top: 0;
     border-radius: var(--radius-lg);
+    overflow-y: auto;
   }
 }
 
