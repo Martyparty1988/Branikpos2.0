@@ -191,7 +191,7 @@ function createItemsManagementSection() {
         id: `item-price-${index}`,
         min: 0,
         step: item.mena === "€" ? 0.01 : 1,
-        readOnly: item.fixni // Odstraněna podmínka item.manualni
+        readOnly: item.fixni || item.manualni
       }
     );
     priceCell.appendChild(priceInput);
@@ -303,7 +303,6 @@ function createItemsManagementSection() {
             
             // Notifikace
             notifySuccess('Položka byla smazána');
-            showSettings();
           }
         );
       }, { type: 'danger', size: 'sm' });
@@ -498,8 +497,7 @@ function addNewItem() {
     nazev: name,
     cena: price,
     mena: currency,
-    fixni: false,
-    manualni: false // Nastaveno na false, aby bylo možné editovat cenu
+    fixni: false
   };
   
   // Přidání poznámky, pokud byla zadána
