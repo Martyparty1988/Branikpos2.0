@@ -120,18 +120,14 @@ function renderInvoiceDetails() {
   // Jméno hosta
   const hostNameInput = createTextInput(
     stav.settings.hostName || '',
-    null, // Bez průběžné aktualizace
+    (e) => {
+      stav.settings.hostName = e.target.value;
+      saveData(LS_KEYS.SETTINGS, stav.settings);
+    },
     { 
       id: 'hostName', 
       placeholder: 'Jméno hosta',
-      autocomplete: 'off', // Pro lepší mobilní zkušenost
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          stav.settings.hostName = e.target.value;
-          saveData(LS_KEYS.SETTINGS, stav.settings);
-        }
-      }
+      autocomplete: 'off' // Pro lepší mobilní zkušenost
     }
   );
   formRow.appendChild(createEl('div', { className: 'form-col' }, [
@@ -141,18 +137,14 @@ function renderInvoiceDetails() {
   // Číslo rezervace
   const resNumInput = createTextInput(
     stav.settings.resNum || '',
-    null, // Bez průběžné aktualizace
+    (e) => {
+      stav.settings.resNum = e.target.value;
+      saveData(LS_KEYS.SETTINGS, stav.settings);
+    },
     { 
       id: 'reservationNum', 
       placeholder: 'Číslo rezervace',
-      autocomplete: 'off', // Pro lepší mobilní zkušenost
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          stav.settings.resNum = e.target.value;
-          saveData(LS_KEYS.SETTINGS, stav.settings);
-        }
-      }
+      autocomplete: 'off' // Pro lepší mobilní zkušenost
     }
   );
   formRow.appendChild(createEl('div', { className: 'form-col' }, [
@@ -167,18 +159,14 @@ function renderInvoiceDetails() {
   // Poznámka
   const noteInput = createTextInput(
     stav.settings.invoiceNote || '',
-    null, // Bez průběžné aktualizace
+    (e) => {
+      stav.settings.invoiceNote = e.target.value;
+      saveData(LS_KEYS.SETTINGS, stav.settings);
+    },
     { 
       id: 'invoiceNote', 
       placeholder: 'Např. Přejeme krásný pobyt!',
-      autocomplete: 'off', // Pro lepší mobilní zkušenost
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          stav.settings.invoiceNote = e.target.value;
-          saveData(LS_KEYS.SETTINGS, stav.settings);
-        }
-      }
+      autocomplete: 'off' // Pro lepší mobilní zkušenost
     }
   );
   formRow2.appendChild(createEl('div', { className: 'form-col' }, [
@@ -221,107 +209,81 @@ function renderItemRow(item, index, category) {
   // Ovládací prvky dle typu položky
   const controls = createEl('div', { className: 'item-controls' });
   
-  // City tax nebo osoba navíc
-  if (item.typ === "citytax" || item.typ === "osobanavic") {
+  // City tax
+  if (item.typ === "citytax") {
     // Input pro počet osob
-    const osobyInput = createEl('input', {
-      type: 'number',
-      className: `form-control ${isMobile ? 'small-input' : ''}`,
-      id: `${id}-osoby`,
-      placeholder: 'Osob',
-      min: 0,
-      value: item.osoby || '',
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          item.osoby = parseInt(e.target.value) || 0;
-          saveData(LS_KEYS.ITEMS, stav.items);
-          updateState({});
-        }
+    const osobyInput = createNumberInput(
+      item.osoby || '',
+      (e) => {
+        item.osoby = parseInt(e.target.value) || 0;
+        saveData(LS_KEYS.ITEMS, stav.items);
+        updateState({});
+      },
+      { 
+        id: `${id}-osoby`, 
+        placeholder: 'Osob', 
+        min: 0,
+        className: isMobile ? 'small-input' : ''  // Menší vstup na mobilech
       }
-    });
-    
-    const osobyLabel = createEl('label', {
-      className: 'form-label',
-      for: `${id}-osoby`
-    }, 'Osob');
-    
-    const osobyGroup = createEl('div', { 
+    );
+    controls.appendChild(createFormField('Osob', osobyInput, { 
       className: 'mini-form' + (isMobile ? ' mobile-mini-form' : '')
-    });
-    osobyGroup.appendChild(osobyLabel);
-    osobyGroup.appendChild(osobyInput);
-    controls.appendChild(osobyGroup);
+    }));
     
     // Input pro počet dní
-    const dnyInput = createEl('input', {
-      type: 'number',
-      className: `form-control ${isMobile ? 'small-input' : ''}`,
-      id: `${id}-dny`,
-      placeholder: 'Dní',
-      min: 0,
-      value: item.dny || '',
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          item.dny = parseInt(e.target.value) || 0;
-          saveData(LS_KEYS.ITEMS, stav.items);
-          updateState({});
-        }
+    const dnyInput = createNumberInput(
+      item.dny || '',
+      (e) => {
+        item.dny = parseInt(e.target.value) || 0;
+        saveData(LS_KEYS.ITEMS, stav.items);
+        updateState({});
+      },
+      { 
+        id: `${id}-dny`, 
+        placeholder: 'Dní', 
+        min: 0,
+        className: isMobile ? 'small-input' : ''  // Menší vstup na mobilech
       }
-    });
-    
-    const dnyLabel = createEl('label', {
-      className: 'form-label',
-      for: `${id}-dny`
-    }, 'Dní');
-    
-    const dnyGroup = createEl('div', { 
+    );
+    controls.appendChild(createFormField('Dní', dnyInput, { 
       className: 'mini-form' + (isMobile ? ' mobile-mini-form' : '')
-    });
-    dnyGroup.appendChild(dnyLabel);
-    dnyGroup.appendChild(dnyInput);
-    controls.appendChild(dnyGroup);
+    }));
   }
   // Manuální položky (např. wellness)
   else if (item.manualni) {
-    const manualInput = createEl('input', {
-      type: 'number',
-      className: `amount-input ${isMobile ? 'small-input' : ''}`,
-      id: `${id}-manual`,
-      placeholder: 'částka',
-      min: 0,
-      step: '0.01',
-      value: item.castka || '',
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          item.castka = validateAmountInput(e.target);
-          saveData(LS_KEYS.ITEMS, stav.items);
-          updateState({});
-        }
+    const manualInput = createNumberInput(
+      item.castka || '',
+      (e) => {
+        item.castka = validateAmountInput(e.target);
+        saveData(LS_KEYS.ITEMS, stav.items);
+        updateState({});
+      },
+      { 
+        id: `${id}-manual`, 
+        placeholder: 'částka', 
+        min: 0, 
+        step: '0.01',
+        className: 'amount-input' + (isMobile ? ' small-input' : '')
       }
-    });
+    );
     controls.appendChild(manualInput);
   }
   // Dárky
   else if (category === "Dárky") {
     // Poznámka k dárku
-    const noteInput = createEl('input', {
-      type: 'text',
-      className: `gift-note ${isMobile ? 'small-input' : ''}`,
-      id: `${id}-note`,
-      placeholder: 'Poznámka (např. welcome drink)',
-      value: item.poznamka || '',
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          item.poznamka = e.target.value;
-          saveData(LS_KEYS.ITEMS, stav.items);
-          updateState({});
-        }
+    const noteInput = createTextInput(
+      item.poznamka || '',
+      (e) => {
+        item.poznamka = e.target.value;
+        saveData(LS_KEYS.ITEMS, stav.items);
+        updateState({});
+      },
+      { 
+        id: `${id}-note`, 
+        placeholder: 'Poznámka (např. welcome drink)',
+        className: 'gift-note' + (isMobile ? ' small-input' : '')
       }
-    });
+    );
     controls.appendChild(noteInput);
     
     // Checkbox pro výběr
@@ -341,22 +303,20 @@ function renderItemRow(item, index, category) {
   }
   // Standardní položky s počtem kusů
   else {
-    const countInput = createEl('input', {
-      type: 'number',
-      className: `count-input ${isMobile ? 'small-input' : ''}`,
-      id: `${id}-count`,
-      placeholder: '0',
-      min: 0,
-      value: item.pocet || '',
-      events: {
-        // Aktualizovat pouze při ztrátě fokusu
-        blur: (e) => {
-          item.pocet = validateNumberInput(e.target);
-          saveData(LS_KEYS.ITEMS, stav.items);
-          updateState({});
-        }
+    const countInput = createNumberInput(
+      item.pocet || '',
+      (e) => {
+        item.pocet = validateNumberInput(e.target);
+        saveData(LS_KEYS.ITEMS, stav.items);
+        updateState({});
+      },
+      { 
+        id: `${id}-count`, 
+        placeholder: '0',
+        min: 0,
+        className: 'count-input' + (isMobile ? ' small-input' : '')
       }
-    });
+    );
     controls.appendChild(countInput);
   }
   
@@ -536,7 +496,6 @@ function ulozUctenku() {
     .filter(item => {
       if (item.kategorie === "Dárky") return item.vybrano;
       if (item.typ === "citytax") return item.osoby && item.dny;
-      if (item.typ === "osobanavic") return item.osoby && item.dny;
       if (item.manualni) return item.castka && item.castka > 0;
       return item.pocet && item.pocet > 0;
     })
