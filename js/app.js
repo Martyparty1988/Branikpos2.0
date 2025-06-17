@@ -24,38 +24,77 @@ export function updateState(newState) {
 
 // Přepínání záložek
 export function switchTab(tab) {
-  stav.tab = tab;
-  document.querySelectorAll(".tab-btn").forEach(b => 
-    b.classList.toggle("active", b.dataset.tab === tab)
-  );
-  renderApp();
+  try {
+    stav.tab = tab;
+    document.querySelectorAll(".tab-btn").forEach(b => 
+      b.classList.toggle("active", b.dataset.tab === tab)
+    );
+    renderApp();
+  } catch (error) {
+    console.error("Chyba při přepínání záložek:", error);
+    // Pokus o obnovení aplikace
+    setTimeout(() => {
+      try {
+        renderApp();
+      } catch (e) {
+        console.error("Nelze obnovit aplikaci:", e);
+      }
+    }, 100);
+  }
 }
 
 // Hlavní render funkce
 function renderApp() {
-  const main = document.getElementById("app");
-  main.innerHTML = ''; // Vyčistit obsah
+  try {
+    const main = document.getElementById("app");
+    if (!main) {
+      console.error("Element s ID 'app' nebyl nalezen!");
+      return;
+    }
+    
+    main.innerHTML = ''; // Vyčistit obsah
 
-  const content = document.createElement('div');
-  content.className = 'fade-in';
-  
-  switch (stav.tab) {
-    case "invoice":
-      renderInvoice(content);
-      break;
-    case "history":
-      renderHistory(content);
-      break;
-    case "stats":
-      renderStats(content);
-      break;
-    case "settings":
-      // Jednoduchý obsah záložky nastavení místo samostatného modulu
-      renderSettingsContent(content);
-      break;
+    const content = document.createElement('div');
+    content.className = 'fade-in';
+    
+    switch (stav.tab) {
+      case "invoice":
+        renderInvoice(content);
+        break;
+      case "history":
+        renderHistory(content);
+        break;
+      case "stats":
+        renderStats(content);
+        break;
+      case "settings":
+        // Jednoduchý obsah záložky nastavení místo samostatného modulu
+        renderSettingsContent(content);
+        break;
+      default:
+        // Fallback na výchozí záložku
+        stav.tab = "invoice";
+        renderInvoice(content);
+        break;
+    }
+    
+    main.appendChild(content);
+  } catch (error) {
+    console.error("Chyba při vykreslování aplikace:", error);
+    // Pokus o obnovení do výchozího stavu
+    try {
+      const main = document.getElementById("app");
+      if (main) {
+        main.innerHTML = '<div class="error-message">Došlo k chybě při načítání obsahu. <button id="resetBtn" class="btn btn-primary">Obnovit aplikaci</button></div>';
+        document.getElementById("resetBtn").addEventListener("click", () => {
+          stav.tab = "invoice";
+          renderApp();
+        });
+      }
+    } catch (e) {
+      console.error("Nelze obnovit do výchozího stavu:", e);
+    }
   }
-  
-  main.appendChild(content);
 }
 
 // Render obsahu záložky nastavení přímo v app.js
@@ -323,31 +362,55 @@ function showToast(message, type = 'info') {
 
 // Inicializace aplikace
 function initApp() {
-  // Přepínače záložek
-  document.querySelectorAll(".tab-btn").forEach(btn =>
-    btn.addEventListener("click", () => switchTab(btn.dataset.tab))
-  );
+  try {
+    // Přepínače záložek
+    document.querySelectorAll(".tab-btn").forEach(btn =>
+      btn.addEventListener("click", () => switchTab(btn.dataset.tab))
+    );
 
-  // Nastavení
-  document.getElementById("settingsBtn").addEventListener("click", showSettings);
-  
-  // Inicializace modálního okna
-  initModal();
-  
-  // Inicializace přepínače témat
-  initTheme();
-  
-  // Zaregistrovat service worker pro offline režim
-  registerServiceWorker();
-  
-  // Kontrola URL parametrů pro přímé přepnutí na záložku
-  checkUrlParams();
-  
-  // Vykreslit aplikaci
-  renderApp();
-  
-  // Přidat listener pro změnu velikosti okna
-  window.addEventListener('resize', handleResize);
+    // Nastavení
+    const settingsBtn = document.getElementById("settingsBtn");
+    if (settingsBtn) {
+      settingsBtn.addEventListener("click", showSettings);
+    } else {
+      console.warn("Tlačítko nastavení nebylo nalezeno!");
+    }
+    
+    // Inicializace modálního okna
+    initModal();
+    
+    // Inicializace přepínače témat
+    initTheme();
+    
+    // Zaregistrovat service worker pro offline režim
+    registerServiceWorker();
+    
+    // Kontrola URL parametrů pro přímé přepnutí na záložku
+    checkUrlParams();
+    
+    // Vykreslit aplikaci
+    renderApp();
+    
+    // Přidat listener pro změnu velikosti okna
+    window.addEventListener('resize', handleResize);
+    
+    // Přidat listener pro detekci chyb
+    window.addEventListener('error', handleError);
+  } catch (error) {
+    console.error("Chyba při inicializaci aplikace:", error);
+    // Pokus o obnovení do základního stavu
+    try {
+      renderApp();
+    } catch (e) {
+      console.error("Nelze obnovit aplikaci:", e);
+    }
+  }
+}
+
+// Handler pro globální chyby
+function handleError(event) {
+  console.error("Zachycena chyba:", event.error);
+  // Zde můžeme přidat kód pro obnovení aplikace nebo zobrazení chybové hlášky
 }
 
 // Service worker pro offline režim
@@ -368,30 +431,71 @@ function registerServiceWorker() {
 
 // Kontrola URL parametrů - např. ?tab=history
 function checkUrlParams() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const tabParam = urlParams.get('tab');
-  
-  if (tabParam && ['invoice', 'history', 'stats', 'settings'].includes(tabParam)) {
-    switchTab(tabParam);
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    
+    if (tabParam && ['invoice', 'history', 'stats', 'settings'].includes(tabParam)) {
+      switchTab(tabParam);
+    }
+  } catch (error) {
+    console.error("Chyba při kontrole URL parametrů:", error);
   }
 }
 
 // Handler pro resize okna
 function handleResize() {
-  // Přidání nebo odebrání třídy pro mobilní zařízení
-  if (window.innerWidth <= 768) {
-    document.body.classList.add('mobile-view');
-  } else {
-    document.body.classList.remove('mobile-view');
+  try {
+    // Přidání nebo odebrání třídy pro mobilní zařízení
+    if (window.innerWidth <= 768) {
+      document.body.classList.add('mobile-view');
+    } else {
+      document.body.classList.remove('mobile-view');
+    }
+    
+    // Aktualizace rozhraní
+    renderApp();
+  } catch (error) {
+    console.error("Chyba při změně velikosti okna:", error);
   }
-  
-  // Aktualizace rozhraní
-  renderApp();
 }
 
-// Po načtení stránky
-window.addEventListener('DOMContentLoaded', initApp);
+// Funkce pro vyčištění localStorage a obnovení aplikace
+window.resetApp = function() {
+  try {
+    localStorage.clear();
+    location.reload(true);
+  } catch (error) {
+    console.error("Chyba při resetování aplikace:", error);
+    alert("Nepodařilo se resetovat aplikaci. Zkuste obnovit stránku ručně (F5).");
+  }
+};
 
-// Exporty pro globální použití (pro kompatibilitu se starým kódem)
-window.closeModal = closeModal;
-window.showModal = showModal;
+// Přidání tlačítka pro reset aplikace do patičky
+function addResetButton() {
+  try {
+    const footer = document.querySelector('.footer-content');
+    if (footer) {
+      const resetBtn = document.createElement('button');
+      resetBtn.className = 'reset-btn';
+      resetBtn.textContent = 'Reset';
+      resetBtn.title = 'Obnovit aplikaci při problémech';
+      resetBtn.addEventListener('click', window.resetApp);
+      footer.appendChild(resetBtn);
+    }
+  } catch (error) {
+    console.error("Chyba při přidávání reset tlačítka:", error);
+  }
+}
+
+// Po načtení stránky inicializovat aplikaci
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    initApp();
+    addResetButton();
+  } catch (error) {
+    console.error("Kritická chyba při startu aplikace:", error);
+    // Zobrazení nouzového tlačítka pro reset
+    document.body.innerHTML += '<div class="emergency-reset" style="position:fixed;bottom:10px;right:10px;z-index:9999;"><button onclick="window.resetApp()" style="padding:10px;background:#f44336;color:white;border:none;border-radius:4px;cursor:pointer;">Nouzový reset</button></div>';
+  }
+});
