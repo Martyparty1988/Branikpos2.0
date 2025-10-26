@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>WorkTime Tracker v6.0 (€)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0c0d12; color: #e5e7eb; }
+        .app-container { max-width: 450px; }
+        .glow-main { box-shadow: 0 0 10px rgba(79, 70, 229, 0.3); } /* Indigo glow */
+        .btn-primary { 
+            background-color: #4f46e5; /* Indigo */
+            color: #ffffff; 
+            font-weight: 700; 
+            transition: all 0.2s; 
+        }
+        .btn-primary:hover { background-color: #4338ca; }
+        .btn-primary:active { transform: scale(0.98); }
+        
+        .btn-secondary { 
+            background-color: #1f2937; /* Darker slate */
+            border: 1px solid #374151; 
+            color: #d1d5db;
+            transition: background-color 0.2s; 
+        }
+        .btn-secondary:hover { background-color: #374151; }
+        
+        input[type="text"], input[type="number"], select { 
+            background-color: #1f2937; 
+            border: 1px solid #374151; 
+            color: #e5e7eb; 
+            padding: 10px 14px; 
+            border-radius: 8px;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus { border-color: #4f46e5; outline: none; box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.5); }
+
+        .tab-active { 
+            background-color: #1f2937; 
+            border-bottom: 2px solid #4f46e5; 
+            color: #e5e7eb;
+        }
+        /* Mobile usability focus */
+        .large-touch-target { min-height: 48px; }
+
+        /* Progress Bar Styling */
+        .progress-bar { height: 10px; background-color: #374151; border-radius: 5px; overflow: hidden; }
+        .progress-fill { background-color: #4f46e5; transition: width 0.5s ease-in-out; }
+    </style>
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WorkTime €">
+    <meta name="theme-color" content="#0c0d12">
+</head>
+<body class="p-4 flex justify-center large-touch-target">
+    <div id="app" class="app-container w-full">
+        
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-extrabold text-[#4f46e5] glow-main large-touch-target">WorkTime v6.0</h1>
+            <p class="text-sm text-gray-400">Sledování výkonu s kategoriemi a cíli | Měna: EUR (€)</p>
+        </header>
+
+        <!-- Loader/Auth Status -->
+        <div id="loading-indicator" class="text-center p-4 bg-[#1f2937] rounded-xl mb-4 hidden">
+            <p class="text-lg">Načítání dat...</p>
+        </div>
+
+        <!-- Main Content (Hidden until auth/load) -->
+        <div id="main-content" class="hidden">
+
+            <!-- New Entry Form (Card) -->
+            <section id="new-entry-form" class="bg-[#111827] p-5 rounded-2xl mb-8 shadow-2xl large-touch-target">
+                <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-2">Nová Činnost</h2>
+                
+                <!-- Type Selection Tabs -->
+                <div class="flex large-touch-target mb-4 border border-gray-700 rounded-lg overflow-hidden">
+                    <button id="tab-hourly" class="flex-1 py-3 text-sm font-semibold tab-active" onclick="switchEntryType('hourly')">
+                        Hodinová Práce
+                    </button>
+                    <button id="tab-task" class="flex-1 py-3 text-sm font-semibold" onclick="switchEntryType('task')">
+                        Úkolová Práce
+                    </button>
+                </div>
+
+                <!-- Shared Category Input -->
+                <div class="mb-4">
+                    <label for="entry-category" class="block text-sm font-medium mb-1 text-gray-400">Kategorie / Projekt:</label>
+                    <select id="entry-category" class="w-full large-touch-target"></select>
+                </div>
+
+                <!-- Hourly Entry Form -->
+                <div id="form-hourly">
+                    <div class="flex justify-between items-center mb-4 p-3 bg-gray-800 rounded-lg">
+                        <span class="text-sm font-medium text-gray-400">Stav:</span>
+                        <div id="timer-status" class="flex items-center text-2xl font-mono font-bold">
+                            <span class="mr-2 text-yellow-400">STOP</span>
+                            <span id="timer-display">00:00:00</span>
+                        </div>
+                    </div>
+                    
+                    <button id="start-stop-button" class="w-full large-touch-target py-3 rounded-xl btn-primary mb-3 shadow-lg" onclick="toggleTimer()">
+                        ZAHÁJIT PRÁCI
+                    </button>
+
+                    <p id="current-session" class="text-xs text-gray-500 text-center">Poslední relace: -</p>
+                </div>
+
+                <!-- Task Entry Form -->
+                <div id="form-task" class="hidden space-y-4">
+                    <div>
+                        <label for="task-name" class="block text-sm font-medium mb-1 text-gray-400">Název Úkolu:</label>
+                        <input type="text" id="task-name" placeholder="Popis úkolu (např. 'Dokončení projektu X')" class="w-full large-touch-target" required>
+                    </div>
+                    
+                    <div>
+                        <label for="task-earnings" class="block text-sm font-medium mb-1 text-gray-400">Výdělek za Úkol (€):</label>
+                        <input type="number" id="task-earnings" placeholder="150.00" class="w-full large-touch-target" min="0" step="0.01" required>
+                    </div>
+
+                    <button class="w-full large-touch-target py-3 rounded-xl btn-primary shadow-lg" onclick="saveTaskEntry()">
+                        ULOŽIT ÚKOL
+                    </button>
+                </div>
+
+            </section>
+            
+            <!-- Summary & Goal -->
+            <section class="bg-[#1f2937] p-5 rounded-2xl mb-8 shadow-xl large-touch-target">
+                <h2 class="text-xl font-bold mb-4">Měsíční Přehled</h2>
+                
+                <!-- Earnings Summary -->
+                <div class="flex justify-between items-end mb-4 border-b border-gray-700 pb-3">
+                    <span class="text-gray-400 text-sm">Celkový Výdělek (vč. běžícího):</span>
+                    <span id="total-earnings" class="text-3xl font-extrabold text-[#818cf8] font-mono">0.00 €</span>
+                </div>
+                
+                <!-- Goal Tracking -->
+                <div class="space-y-3">
+                    <div class="flex justify-between text-sm font-semibold">
+                        <span class="text-gray-400">Měsíční Cíl (€):</span>
+                        <span id="goal-display" class="text-indigo-400">500.00 €</span>
+                    </div>
+                    
+                    <div class="progress-bar">
+                        <div id="goal-progress" class="progress-fill h-full" style="width: 0%;"></div>
+                    </div>
+                    <p id="goal-progress-text" class="text-sm text-center text-gray-400">0% hotovo</p>
+                </div>
+                
+                <div class="flex justify-between mt-4">
+                    <div class="text-center">
+                        <p class="text-gray-500 text-xs">Celkem Času (min):</p>
+                        <p id="total-time" class="font-bold text-lg text-green-400">0</p>
+                    </div>
+                    <div class="text-center">
+                        <p class="text-gray-500 text-xs">Zbývá do Cíle (€):</p>
+                        <p id="remaining-goal" class="font-bold text-lg text-red-400">500.00 €</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Entries List with Filters -->
+            <section class="mb-8">
+                <h2 class="text-2xl font-bold mb-4">Záznamy <span id="user-display" class="text-sm text-gray-500"></span></h2>
+                
+                <!-- Filters -->
+                <div class="flex space-x-2 mb-4">
+                    <select id="filter-type" class="flex-1 py-2 text-sm large-touch-target" onchange="renderUI()">
+                        <option value="all">Typ: Vše</option>
+                        <option value="hourly">Typ: Hodinová</option>
+                        <option value="task">Typ: Úkolová</option>
+                    </select>
+                    <select id="filter-category" class="flex-1 py-2 text-sm large-touch-target" onchange="renderUI()">
+                        <option value="all">Projekt: Vše</option>
+                        <!-- Options filled by JS -->
+                    </select>
+                </div>
+
+                <div id="entries-list" class="space-y-3">
+                    <!-- Entries will be injected here -->
+                    <p id="no-entries" class="text-gray-500 text-center p-4 large-touch-target">Žádné záznamy k zobrazení.</p>
+                </div>
+            </section>
+
+            <!-- Settings and Actions -->
+            <section class="bg-[#111827] p-5 rounded-2xl mb-6 shadow-xl large-touch-target">
+                <h2 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2">Nastavení</h2>
+                
+                <!-- Hourly Rate Setting -->
+                <div class="mb-4">
+                    <label for="hourly-rate" class="block text-sm font-medium mb-1 text-gray-400">Hodinová Sazba (€/h):</label>
+                    <div class="flex space-x-2">
+                        <input type="number" id="hourly-rate" value="10.00" min="1" step="0.01" class="flex-1 rounded-lg large-touch-target">
+                        <button class="py-2 px-4 rounded-lg btn-secondary large-touch-target" onclick="saveRate()">Uložit</button>
+                    </div>
+                </div>
+
+                <!-- Monthly Goal Setting -->
+                <div class="mb-6">
+                    <label for="monthly-goal" class="block text-sm font-medium mb-1 text-gray-400">Měsíční Cíl (€):</label>
+                    <div class="flex space-x-2">
+                        <input type="number" id="monthly-goal" value="500.00" min="1" step="1" class="flex-1 rounded-lg large-touch-target">
+                        <button class="py-2 px-4 rounded-lg btn-secondary large-touch-target" onclick="saveGoal()">Uložit</button>
+                    </div>
+                </div>
+
+
+                <!-- Actions -->
+                <div class="space-y-3 pt-4 border-t border-gray-700">
+                    <button class="w-full py-2 rounded-lg btn-secondary large-touch-target" onclick="exportToCSV()">Exportovat do CSV</button>
+                    <button class="w-full py-2 rounded-lg bg-red-800 hover:bg-red-700 text-white font-bold large-touch-target" onclick="showConfirmDelete()">Smazat Všechny Záznamy</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 hidden z-50">
+            <div class="bg-[#1f2937] p-6 rounded-xl shadow-2xl w-full max-w-sm border border-gray-700">
+                <h3 class="text-xl font-bold mb-4 text-red-400">Potvrdit Smazání</h3>
+                <p class="mb-6 text-gray-300">Opravdu chcete smazat VŠECHNY záznamy? Tato akce je nevratná.</p>
+                <div class="flex justify-end space-x-3">
+                    <button class="py-2 px-4 rounded-lg btn-secondary large-touch-target" onclick="hideConfirmDelete()">Zrušit</button>
+                    <button class="py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold large-touch-target" onclick="deleteAllEntries()">Smazat</button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "mock-key" };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        // Set Firebase log level for debugging
+        setLogLevel('debug');
+
+        // --- GLOBAL STATE ---
+        const DEFAULT_RATE_EUR = 15.00; // Updated default rate
+        const DEFAULT_GOAL_EUR = 500.00;
+        const DEFAULT_CATEGORIES = ['Design', 'Vývoj', 'Schůzky', 'Administrativa', 'Osobní'];
+
+        let state = {
+            currentUser: null,
+            timerStartTime: null, // Timestamp when timer was started
+            entries: [], // Array of { id, user, type: 'hourly'|'task', category, startTime, endTime, duration, taskName, taskEarnings }
+            settings: {
+                userRates: {}, // { userId: rateInEUR }
+                monthlyGoal: DEFAULT_GOAL_EUR,
+                categories: DEFAULT_CATEGORIES
+            },
+            entryType: 'hourly', // 'hourly' or 'task'
+            // Filtering state
+            filters: {
+                type: 'all',
+                category: 'all',
+                month: new Date().getMonth() + 1, // Current month (1-12)
+                year: new Date().getFullYear() // Current year
+            }
+        };
+
+        let timerInterval = null;
+
+        // --- FIREBASE PATHS AND FUNCTIONS ---
+        const FIREBASE_COLLECTION_PATH = `/artifacts/${appId}/users/${auth.currentUser?.uid}/work_tracker_data_v6`;
+
+        /**
+         * Saves the current state (entries and settings) to Firestore.
+         */
+        async function saveState() {
+            if (!state.currentUser) return;
+            const docRef = doc(db, FIREBASE_COLLECTION_PATH.replace(auth.currentUser.uid, state.currentUser), 'user_data');
+            
+            try {
+                // Remove transient data before saving
+                const dataToSave = {
+                    entries: state.entries,
+                    settings: state.settings,
+                    timerStartTime: state.timerStartTime,
+                    timestamp: serverTimestamp()
+                };
+                await setDoc(docRef, dataToSave);
+            } catch (error) {
+                console.error("Chyba při ukládání stavu do Firestore:", error);
+            }
+        }
+
+        /**
+         * Listens for real-time updates from Firestore.
+         */
+        function setupFirestoreListener() {
+            if (!state.currentUser) return;
+            const docRef = doc(db, FIREBASE_COLLECTION_PATH.replace(auth.currentUser.uid, state.currentUser), 'user_data');
+            
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // Merge incoming data with current state
+                    state.entries = data.entries || [];
+                    
+                    // Handle potential missing sub-properties in settings
+                    state.settings.userRates = data.settings?.userRates || {};
+                    state.settings.monthlyGoal = data.settings?.monthlyGoal || DEFAULT_GOAL_EUR;
+                    // Ensure default categories are present if Firestore returns null/empty
+                    state.settings.categories = data.settings?.categories || DEFAULT_CATEGORIES;
+
+                    state.timerStartTime = data.timerStartTime || null;
+                } else {
+                    console.log("Žádná data v databázi, inicializuji výchozí stav.");
+                    state.entries = [];
+                    state.settings.userRates = { [state.currentUser]: DEFAULT_RATE_EUR };
+                    state.settings.monthlyGoal = DEFAULT_GOAL_EUR;
+                    state.settings.categories = DEFAULT_CATEGORIES;
+                }
+                
+                // After fetching/initializing state, update UI
+                renderUI();
+                startTimerDisplay(); // Re-activate timer interval if needed
+            }, (error) => {
+                console.error("Chyba při real-time naslouchání Firestore:", error);
+            });
+        }
+
+        // --- AUTHENTICATION & INITIALIZATION ---
+
+        onAuthStateChanged(auth, async (user) => {
+            document.getElementById('loading-indicator').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+
+            if (user) {
+                state.currentUser = user.uid;
+                document.getElementById('user-display').textContent = `(ID: ${state.currentUser.substring(0, 8)}...)`;
+                setupFirestoreListener(); // Start listening for data
+            } else {
+                console.log("Uživatel není přihlášen. Přihlašuji anonymně.");
+                await signInAnonymously(auth);
+            }
+        });
+
+        async function initAuth() {
+            try {
+                document.getElementById('loading-indicator').classList.remove('hidden');
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Chyba při inicializaci autentizace:", error);
+                document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500">Chyba autentizace. Zkuste prosím znovu.</p>';
+            }
+        }
+
+        // --- CORE LOGIC ---
+        
+        function vibrate(duration = 10) {
+            if ('vibrate' in navigator) {
+                navigator.vibrate(duration);
+            }
+        }
+
+        window.switchEntryType = function(type) {
+            vibrate();
+            state.entryType = type;
+            const hourlyForm = document.getElementById('form-hourly');
+            const taskForm = document.getElementById('form-task');
+            const tabHourly = document.getElementById('tab-hourly');
+            const tabTask = document.getElementById('tab-task');
+
+            // Reset tab classes
+            tabHourly.classList.remove('tab-active');
+            tabTask.classList.remove('tab-active');
+
+            if (type === 'hourly') {
+                hourlyForm.classList.remove('hidden');
+                taskForm.classList.add('hidden');
+                tabHourly.classList.add('tab-active');
+            } else {
+                hourlyForm.classList.add('hidden');
+                taskForm.classList.remove('hidden');
+                tabTask.classList.add('tab-active');
+            }
+        }
+
+        window.toggleTimer = function() {
+            vibrate(50);
+            const selectedCategory = document.getElementById('entry-category').value;
+            
+            if (state.timerStartTime) {
+                // Stop the timer
+                const now = Date.now();
+                const duration = now - state.timerStartTime;
+                
+                state.entries.push({
+                    id: crypto.randomUUID(),
+                    user: state.currentUser,
+                    type: 'hourly',
+                    category: selectedCategory, // Save category
+                    startTime: state.timerStartTime,
+                    endTime: now,
+                    duration: duration,
+                    timestamp: Date.now()
+                });
+
+                state.timerStartTime = null;
+                clearInterval(timerInterval);
+                timerInterval = null;
+            } else {
+                // Start the timer
+                state.timerStartTime = Date.now();
+                startTimerDisplay();
+            }
+            saveState(); 
+            renderUI(); 
+        }
+        
+        window.saveTaskEntry = function() {
+            vibrate(50);
+            const taskNameInput = document.getElementById('task-name');
+            const taskEarningsInput = document.getElementById('task-earnings');
+            const selectedCategory = document.getElementById('entry-category').value;
+            
+            const taskName = taskNameInput.value.trim();
+            const taskEarnings = parseFloat(taskEarningsInput.value);
+
+            if (!taskName || isNaN(taskEarnings) || taskEarnings <= 0 || !selectedCategory) {
+                console.error("Neplatné zadání: Název, výdělek nebo kategorie chybí/je neplatná.");
+                return;
+            }
+
+            state.entries.push({
+                id: crypto.randomUUID(),
+                user: state.currentUser,
+                type: 'task',
+                category: selectedCategory, // Save category
+                taskName: taskName,
+                taskEarnings: taskEarnings,
+                timestamp: Date.now()
+            });
+
+            // Clear form
+            taskNameInput.value = '';
+            taskEarningsInput.value = '';
+            
+            saveState();
+            renderUI();
+        }
+
+        window.deleteEntry = function(id) {
+            vibrate(30);
+            state.entries = state.entries.filter(e => e.id !== id);
+            saveState();
+            renderUI();
+        }
+
+        window.saveRate = function() {
+            vibrate(30);
+            const rateInput = document.getElementById('hourly-rate');
+            const newRate = parseFloat(rateInput.value);
+
+            if (isNaN(newRate) || newRate <= 0) {
+                rateInput.value = state.settings.userRates[state.currentUser]?.toFixed(2) || DEFAULT_RATE_EUR.toFixed(2);
+                return;
+            }
+
+            if (!state.settings.userRates) { state.settings.userRates = {}; }
+            state.settings.userRates[state.currentUser] = newRate;
+            
+            // Persist settings changes
+            saveState();
+            renderUI();
+        }
+        
+        window.saveGoal = function() {
+            vibrate(30);
+            const goalInput = document.getElementById('monthly-goal');
+            const newGoal = parseFloat(goalInput.value);
+
+            if (isNaN(newGoal) || newGoal <= 0) {
+                goalInput.value = state.settings.monthlyGoal.toFixed(2) || DEFAULT_GOAL_EUR.toFixed(2);
+                return;
+            }
+
+            state.settings.monthlyGoal = newGoal;
+
+            // Persist settings changes
+            saveState();
+            renderUI();
+        }
+
+
+        window.showConfirmDelete = function() {
+            vibrate(20);
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        window.hideConfirmDelete = function() {
+            vibrate(20);
+            document.getElementById('delete-modal').classList.add('hidden');
+        }
+
+        window.deleteAllEntries = function() {
+            vibrate(50);
+            state.entries = [];
+            state.timerStartTime = null; // Also reset running timer
+            hideConfirmDelete();
+            saveState();
+            renderUI();
+        }
+
+        // --- UTILITY FUNCTIONS ---
+        
+        function formatDuration(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return [hours, minutes, seconds].map(val => val.toString().padStart(2, '0')).join(':');
+        }
+
+        function formatDate(ts) {
+            return new Date(ts).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' });
+        }
+
+        function formatTime(ts) {
+            return new Date(ts).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatCurrency(amount) {
+             return `${amount.toFixed(2).replace('.', ',')} €`;
+        }
+        
+        function isCurrentMonth(timestamp) {
+            const date = new Date(timestamp);
+            return date.getMonth() + 1 === state.filters.month && date.getFullYear() === state.filters.year;
+        }
+
+        // --- TIMER DISPLAY LOGIC ---
+        
+        function updateTimerDisplay() {
+            if (state.timerStartTime) {
+                const elapsed = Date.now() - state.timerStartTime;
+                document.getElementById('timer-display').textContent = formatDuration(elapsed);
+                
+                // Recalculate summary live for goal progress update
+                const summary = calculateSummary();
+                updateSummaryDisplay(summary);
+            }
+        }
+
+        function startTimerDisplay() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            if (state.timerStartTime) {
+                document.getElementById('timer-status').innerHTML = '<span class="mr-2 text-red-500">BĚŽÍ</span><span id="timer-display">00:00:00</span>';
+                const startStopButton = document.getElementById('start-stop-button');
+                startStopButton.textContent = 'UKONČIT PRÁCI';
+                startStopButton.classList.remove('btn-primary');
+                startStopButton.classList.add('bg-red-600', 'hover:bg-red-700', 'text-white');
+                updateTimerDisplay();
+                timerInterval = setInterval(updateTimerDisplay, 1000);
+            } else {
+                 const startStopButton = document.getElementById('start-stop-button');
+                 startStopButton.textContent = 'ZAHÁJIT PRÁCI';
+                 startStopButton.classList.add('btn-primary');
+                 startStopButton.classList.remove('bg-red-600', 'hover:bg-red-700', 'text-white');
+            }
+        }
+
+        // --- RENDERING FUNCTIONS ---
+        
+        /**
+         * Calculates total time and earnings from all entries.
+         * Optionally takes only current month entries for goal tracking.
+         */
+        function calculateSummary() {
+            let totalDurationMs = 0;
+            let totalEarnings = 0;
+            
+            // Get rate for current user
+            const rate = state.settings.userRates[state.currentUser] || DEFAULT_RATE_EUR;
+            
+            // 1. Calculate running session earnings for current month
+            if (state.timerStartTime && isCurrentMonth(state.timerStartTime)) {
+                const elapsed = Date.now() - state.timerStartTime;
+                totalDurationMs += elapsed;
+                const durationHours = elapsed / (1000 * 60 * 60);
+                totalEarnings += durationHours * rate;
+            }
+
+            // 2. Calculate saved entries earnings for current month
+            state.entries.forEach(entry => {
+                // Timestamp property holds the creation/end time for filtering
+                const entryTimestamp = entry.endTime || entry.timestamp; 
+                if (isCurrentMonth(entryTimestamp)) {
+                    if (entry.type === 'hourly' && entry.duration) {
+                        totalDurationMs += entry.duration;
+                        const durationHours = entry.duration / (1000 * 60 * 60);
+                        // Use the rate saved in the state (could differ if user changed rate during month)
+                        totalEarnings += durationHours * rate; 
+                    } else if (entry.type === 'task' && entry.taskEarnings) {
+                        totalEarnings += entry.taskEarnings;
+                    }
+                }
+            });
+
+            return { totalDurationMs, totalEarnings, monthlyGoal: state.settings.monthlyGoal, currentRate: rate };
+        }
+        
+        /**
+         * Updates the summary card display.
+         */
+        function updateSummaryDisplay(summary) {
+            document.getElementById('total-time').textContent = `${Math.round(summary.totalDurationMs / 60000)} min`;
+            document.getElementById('total-earnings').textContent = formatCurrency(summary.totalEarnings);
+
+            // Goal calculation
+            const goal = summary.monthlyGoal;
+            const progress = Math.min(100, (summary.totalEarnings / goal) * 100);
+            const remaining = Math.max(0, goal - summary.totalEarnings);
+            
+            document.getElementById('goal-display').textContent = formatCurrency(goal);
+            document.getElementById('remaining-goal').textContent = formatCurrency(remaining);
+            
+            const progressBar = document.getElementById('goal-progress');
+            progressBar.style.width = `${progress}%`;
+            progressBar.classList.toggle('bg-red-600', progress >= 100);
+            progressBar.classList.toggle('bg-[#4f46e5]', progress < 100);
+
+            document.getElementById('goal-progress-text').textContent = `${progress.toFixed(1).replace('.', ',')}% hotovo`;
+            
+            // Adjust remaining text color
+            document.getElementById('remaining-goal').classList.toggle('text-red-400', remaining > 0);
+            document.getElementById('remaining-goal').classList.toggle('text-green-400', remaining === 0);
+        }
+
+        /**
+         * Populates the category dropdowns from state.settings.categories.
+         */
+        function populateCategoryDropdowns() {
+            const categories = state.settings.categories;
+            const entrySelect = document.getElementById('entry-category');
+            const filterSelect = document.getElementById('filter-category');
+
+            // 1. Populate New Entry Select (Always select the first one by default)
+            entrySelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            
+            // 2. Populate Filter Select (Add "All" option)
+            filterSelect.innerHTML = '<option value="all">Projekt: Vše</option>' + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            
+            // Set current filter value if it exists
+            filterSelect.value = state.filters.category;
+            
+            // If the category filter is set to a non-existent category, reset it to 'all'
+            if (!categories.includes(state.filters.category)) {
+                 state.filters.category = 'all';
+                 filterSelect.value = 'all';
+            }
+        }
+
+
+        /**
+         * Renders all UI components based on the current state and filters.
+         */
+        function renderUI() {
+            if (!state.currentUser) return;
+
+            // 1. Setup/Settings Update
+            const currentRate = state.settings.userRates[state.currentUser] || DEFAULT_RATE_EUR;
+            document.getElementById('hourly-rate').value = currentRate.toFixed(2);
+            document.getElementById('monthly-goal').value = state.settings.monthlyGoal.toFixed(2);
+            
+            populateCategoryDropdowns();
+            document.getElementById('filter-type').value = state.filters.type;
+            
+            // 2. Render Timer/New Entry Section
+            const currentSession = document.getElementById('current-session');
+            if (state.timerStartTime) {
+                // Running timer status is handled by startTimerDisplay/updateTimerDisplay intervals
+            } else {
+                document.getElementById('timer-status').innerHTML = '<span class="mr-2 text-yellow-400">STOP</span><span id="timer-display">00:00:00</span>';
+                
+                const lastEntry = state.entries.filter(e => e.type === 'hourly').sort((a, b) => b.timestamp - a.timestamp)[0];
+                if (lastEntry) {
+                    currentSession.textContent = `Poslední relace: ${formatTime(lastEntry.startTime)} - ${formatTime(lastEntry.endTime)} (${formatDuration(lastEntry.duration)}) v kategorii ${lastEntry.category}`;
+                } else {
+                    currentSession.textContent = "Poslední relace: -";
+                }
+            }
+
+            // 3. Render Summary
+            const summary = calculateSummary();
+            updateSummaryDisplay(summary);
+
+            // 4. Render Entries List
+            const entriesList = document.getElementById('entries-list');
+            entriesList.innerHTML = ''; 
+            
+            // Apply Filters
+            state.filters.type = document.getElementById('filter-type').value;
+            state.filters.category = document.getElementById('filter-category').value;
+            
+            const filteredEntries = [...state.entries]
+                .sort((a, b) => (b.timestamp || b.endTime) - (a.timestamp || a.endTime))
+                .filter(entry => {
+                    // Filter by month/year (all entries)
+                    const entryTimestamp = entry.endTime || entry.timestamp; 
+                    if (!isCurrentMonth(entryTimestamp)) return false;
+
+                    // Filter by type
+                    if (state.filters.type !== 'all' && entry.type !== state.filters.type) return false;
+
+                    // Filter by category
+                    if (state.filters.category !== 'all' && entry.category !== state.filters.category) return false;
+
+                    return true;
+                });
+
+
+            if (filteredEntries.length === 0) {
+                document.getElementById('no-entries').classList.remove('hidden');
+            } else {
+                document.getElementById('no-entries').classList.add('hidden');
+                
+                filteredEntries.forEach(entry => {
+                    let contentHTML = '';
+                    let earningsDisplay = '0.00 €';
+                    let title = '';
+                    
+                    if (entry.type === 'hourly') {
+                        const durationHours = entry.duration / (1000 * 60 * 60);
+                        const rate = state.settings.userRates[entry.user] || DEFAULT_RATE_EUR;
+                        const earnings = durationHours * rate;
+                        earningsDisplay = formatCurrency(earnings);
+                        title = `Hodinová Práce (${entry.category}): ${formatDuration(entry.duration)}`;
+                        contentHTML = `
+                            <p class="text-xs text-gray-500">
+                                ${formatDate(entry.startTime)} | ${formatTime(entry.startTime)} - ${formatTime(entry.endTime)}
+                            </p>
+                            <p class="text-xs text-gray-500">
+                                Sazba: ${formatCurrency(rate)}/h
+                            </p>
+                        `;
+                    } else if (entry.type === 'task') {
+                        earningsDisplay = formatCurrency(entry.taskEarnings);
+                        title = `Úkol (${entry.category}): ${entry.taskName}`;
+                        contentHTML = `
+                            <p class="text-xs text-gray-500">
+                                Zaznamenáno: ${formatDate(entry.timestamp)}
+                            </p>
+                        `;
+                    }
+
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'flex justify-between items-center bg-[#1f2937] p-4 rounded-xl border-l-4 border-[#4f46e5] large-touch-target hover:bg-[#253241] transition-colors';
+                    entryDiv.innerHTML = `
+                        <div>
+                            <p class="font-medium text-white">${title}</p>
+                            ${contentHTML}
+                        </div>
+                        <div class="text-right flex items-center space-x-2">
+                            <span class="text-lg font-bold text-green-400">${earningsDisplay}</span>
+                            <button class="text-red-500 hover:text-red-400 p-2 rounded-full large-touch-target" onclick="deleteEntry('${entry.id}')" aria-label="Smazat záznam">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 10-2 0v6a1 1 0 102 0V8z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                    entriesList.appendChild(entryDiv);
+                });
+            }
+        }
+
+        // --- EXPORT FUNCTION ---
+
+        window.exportToCSV = function() {
+            vibrate();
+            const userEntries = state.entries.filter(e => e.user === state.currentUser);
+            if (userEntries.length === 0) { 
+                console.warn('Není co exportovat.'); 
+                return; 
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Typ;Kategorie;Datum;Popis;Doba (hodiny);Sazba (€/h);Výdělek (€)\r\n";
+            
+            const rate = state.settings.userRates[state.currentUser] || DEFAULT_RATE_EUR;
+            
+            userEntries.forEach(entry => {
+                let row = [entry.type === 'hourly' ? 'Hodinová' : 'Úkolová', entry.category || 'N/A'];
+                let durationHours = 0;
+                let earnings = 0;
+                let description = '';
+                let hourlyRateDisplay = '';
+                const entryDate = new Date(entry.endTime || entry.timestamp).toLocaleDateString('cs-CZ');
+
+                if (entry.type === 'hourly') {
+                    durationHours = entry.duration / (1000 * 60 * 60);
+                    earnings = durationHours * rate;
+                    hourlyRateDisplay = rate.toFixed(2);
+                    description = `Od ${formatTime(entry.startTime)} do ${formatTime(entry.endTime)}`;
+                } else if (entry.type === 'task') {
+                    earnings = entry.taskEarnings;
+                    durationHours = 0; 
+                    hourlyRateDisplay = 'N/A';
+                    description = entry.taskName;
+                }
+                
+                row.push(entryDate); 
+                row.push(`"${description.replace(/"/g, '""')}"`); // Quote and escape description
+                row.push(durationHours.toFixed(2).replace('.', ',')); 
+                row.push(hourlyRateDisplay.toString().replace('.', ',')); 
+                row.push(earnings.toFixed(2).replace('.', ',')); 
+
+                csvContent += row.join(';') + "\r\n";
+            });
+
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csvContent));
+            link.setAttribute("download", `export_prace_EUR_v6_${state.currentUser}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+        }
+
+        // --- START APP ---
+        window.onload = initAuth;
+
+    </script>
+</body>
+</html>
