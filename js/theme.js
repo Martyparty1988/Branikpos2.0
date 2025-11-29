@@ -4,43 +4,46 @@ import { loadData, saveData, LS_KEYS } from './data.js';
 // Výchozí téma (light/dark)
 const DEFAULT_THEME = 'light';
 
+// Nastaví téma bez uložení do localStorage
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  updateMetaThemeColor(theme);
+}
+
 // Inicializace tématu
 export function initTheme() {
   // Zkontrolujeme, zda má prohlížeč preferované barevné schéma
   const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-  
+
   // Načtení uloženého tématu nebo použití preference systému
-  const savedTheme = loadData(LS_KEYS.THEME, prefersDarkScheme.matches ? 'dark' : DEFAULT_THEME);
-  
-  // Nastavení tématu
-  setTheme(savedTheme);
-  
+  const savedTheme = loadData(LS_KEYS.THEME, null);
+  const initialTheme = savedTheme || (prefersDarkScheme.matches ? 'dark' : DEFAULT_THEME);
+
+  // Nastavení tématu, ale do localStorage ukládáme jen explicitní volbu
+  applyTheme(initialTheme);
+
   // Přidání event listeneru na přepínač
   const themeToggle = document.getElementById('themeToggle');
   if (themeToggle) {
     themeToggle.addEventListener('click', toggleTheme);
   }
-  
+
   // Sledování změny preference systému
   prefersDarkScheme.addEventListener('change', (event) => {
     // Pokud uživatel explicitně nevybral téma, sledujeme systémové preference
-    const currentTheme = loadData(LS_KEYS.THEME, null);
-    if (!currentTheme) {
-      setTheme(event.matches ? 'dark' : 'light');
+    const explicitTheme = loadData(LS_KEYS.THEME, null);
+    if (!explicitTheme) {
+      applyTheme(event.matches ? 'dark' : 'light');
     }
   });
-  
-  // Přidání meta tagu pro barevné schéma prohlížeče
-  updateMetaThemeColor(savedTheme);
+
+  // applyTheme již meta tag aktualizovalo při inicializaci
 }
 
 // Nastavení tématu
 export function setTheme(theme) {
-  document.documentElement.setAttribute('data-theme', theme);
+  applyTheme(theme);
   saveData(LS_KEYS.THEME, theme);
-  
-  // Aktualizace meta tagu pro barevné schéma prohlížeče
-  updateMetaThemeColor(theme);
 }
 
 // Přepnutí tématu
