@@ -524,6 +524,7 @@ body {
   display: flex;
   margin: 0 -8px;
   flex-wrap: wrap;
+  gap: var(--spacing-sm);
 }
 
 .form-col {
@@ -872,6 +873,7 @@ body {
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
+  overflow-y: auto;
   transition: opacity var(--transition-normal), visibility var(--transition-normal);
 }
 
@@ -1480,9 +1482,11 @@ body {
   .form-row {
     flex-direction: column;
   }
-  
+
   .form-col {
     padding: var(--spacing-xs) 0;
+    min-width: 0;
+    width: 100%;
   }
   
   .theme-toggle {
@@ -1496,11 +1500,16 @@ body {
     white-space: nowrap;
   }
   
+  .modal {
+    align-items: flex-start;
+    padding: var(--spacing-lg) var(--spacing-md);
+  }
+
   .modal-container {
     width: 95%;
     max-height: 85vh;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    margin-top: auto;
+    margin: 0 auto;
   }
   
   .modal-content {
@@ -1700,20 +1709,84 @@ body {
       width: 100%;
     }
     
-    /* Responzivní tabulky - alternativní zobrazení na malých mobilech */
-    .items-table th:not(:first-child):not(:last-child),
-    .items-table td:not(:first-child):not(:last-child) {
-      display: none;
+    /* Responzivní tabulka položek - vertikální zobrazení bez horizontálního scrollu */
+    .items-table {
+      display: block;
+      overflow: visible;
     }
-    
-    .items-table th:first-child,
-    .items-table td:first-child {
-      width: 60%;
+
+    .items-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+      border: 0;
     }
-    
-    .items-table th:last-child,
-    .items-table td:last-child {
-      width: 40%;
+
+    .items-table tbody,
+    .items-table tr,
+    .items-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .items-table tr {
+      margin-bottom: var(--spacing-sm);
+      padding: var(--spacing-sm);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background-color: var(--color-surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .items-table td {
+      display: grid;
+      grid-template-columns: minmax(120px, 45%) 1fr;
+      gap: var(--spacing-xs);
+      align-items: center;
+      padding: var(--spacing-xs) 0;
+      font-size: var(--font-size-sm);
+      border-bottom: none;
+    }
+
+    .items-table td + td {
+      margin-top: var(--spacing-xs);
+    }
+
+    .items-table td::before {
+      font-weight: var(--font-weight-medium);
+      color: var(--color-text-secondary);
+    }
+
+    .items-table td:nth-child(1)::before {
+      content: 'Kategorie';
+    }
+
+    .items-table td:nth-child(2)::before {
+      content: 'Název';
+    }
+
+    .items-table td:nth-child(3)::before {
+      content: 'Cena';
+    }
+
+    .items-table td:nth-child(4)::before {
+      content: 'Měna';
+    }
+
+    .items-table td:nth-child(5)::before {
+      content: 'Akce';
+    }
+
+    .items-table .table-actions {
+      display: flex;
+      justify-content: flex-start;
+      gap: var(--spacing-xs);
+      flex-wrap: wrap;
     }
   }
 }
